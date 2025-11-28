@@ -31,30 +31,28 @@ cd af-training
 # 3. Create virtual environment and install dependencies
 uv venv
 source .venv/bin/activate  # On Windows WSL2
+## 1. Prerequisites
 
-# 4. Install project
-uv pip install -e .
+- **OS**: Linux (Ubuntu 22.04+ recommended) or Windows (WSL2)
+- **GPU**: NVIDIA GPU with CUDA support
+- **Python**: 3.12 (Recommended)
+- **CUDA**: 12.0+
 
-# 5. Verify installation
-python -c "import ultralytics; print('✓ Ultralytics installed')"
-python -c "import torch; print(f'✓ PyTorch {torch.__version__}')"
-python -c "import torch; print(f'✓ CUDA available: {torch.cuda.is_available()}')"
-```
+## 2. Installation (Host)
 
-### Option B: Using `pip` (Traditional)
+We recommend using `uv` for fast, reliable dependency management.
 
 ```bash
-# 1. Create virtual environment
-python3 -m venv .venv
+# 1. Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 2. Create virtual environment (Python 3.12)
+uv venv --python 3.12
 source .venv/bin/activate
 
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# Or install as editable package
-pip install -e .
-
-# 3. Verify installation
+# 3. Install dependencies
+# This installs torch, ultralytics, onnxruntime-gpu, tensorrt, etc.
+uv pip install -e .
 python -c "import ultralytics; print('✓ Ultralytics installed')"
 ```
 

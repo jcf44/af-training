@@ -17,6 +17,13 @@ Train YOLO models on your GPU (RTX 5090, 4090, etc.), export to ONNX, and deploy
 - 💻 **x86 PCs** - Workstation deployments (FP16)
 - 🤖 **Jetson Orin Nano** - Edge devices (INT8)
 
+**Key Features:**
+- 🖥️ **Web UI** - Full dashboard for training, monitoring, and management
+- 📡 **Real-time Logs** - Live streaming logs for long-running jobs
+- ⚡ **INT8 Calibration** - Auto-generate calibration caches for edge deployment
+- 📦 **Deployment Bundles** - One-click download of ONNX + Config + Labels + Cache
+- 🐳 **Docker & Host Support** - Flexible environment setup
+
 ---
 
 ## 🚀 Quick Start
@@ -39,7 +46,24 @@ docker-compose build training
 
 ```
 
-### Training
+### Training & Deployment (UI Workflow)
+
+1.  **Start the UI**:
+    ```bash
+    # Terminal 1: API
+    uv run af-training-api
+    
+    # Terminal 2: UI
+    cd ui && npm run dev
+    ```
+    Open [http://localhost:3000](http://localhost:3000).
+
+2.  **Train**: Go to **Training**, select dataset and model size, click **Start Training**.
+3.  **Export**: Go to **Models**, click **Export ONNX**.
+4.  **Calibrate**: Click **Calibrate INT8** (auto-generates config).
+5.  **Bundle**: Click **Bundle** to download a ZIP with everything needed for deployment.
+
+### CLI Workflow (Alternative)
 
 **Host (Recommended)**:
 ```bash
@@ -47,36 +71,26 @@ source .venv/bin/activate
 cd training
 
 # Train model
-python scripts/train.py \
-    --data configs/datasets/ppe.yaml \
-    --name ppe_v1 \
-    --size s \
-    --epochs 200
+python scripts/train.py --data configs/datasets/ppe.yaml --name ppe_v1 --size s
 
 # Export to ONNX
 python scripts/export_onnx.py --all
+
+# Generate Calibration
+python scripts/generate_calibration.py --model outputs/trained/ppe_v1/weights/best.pt --data configs/calibration/ppe_calib.yaml --output outputs/calibration
 ```
 
-**Docker (Alternative)**:
+**Docker**:
 ```bash
-docker-compose run training python scripts/train.py \
-    --data configs/datasets/ppe.yaml --name ppe_v1 --size s
-
-docker-compose run training python scripts/export_onnx.py --all
+docker-compose run training python scripts/train.py --data configs/datasets/ppe.yaml --name ppe_v1 --size s
 ```
 
 ### Deployment
 
-```bash
-# Copy ONNX models to deployment
-cp training/outputs/onnx/*.onnx deployment/common/models/
-
-# Deploy to x86/Cloud
-docker-compose --profile x86 up x86-deploy
-
-# Or deploy to Jetson Edge
-docker-compose --profile edge up edge-deploy
-```
+**Using the Bundle:**
+1.  Download the **Deployment Bundle** from the UI.
+2.  Upload/Extract to your target device.
+3.  Run with DeepStream (using the included `config_infer_primary.txt`).
 
 ---
 

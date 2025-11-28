@@ -273,45 +273,6 @@ deepstream-app -c configs/config_infer_ppe.txt
 
 **Error**: `Out of memory during TensorRT build`
 
-**Solution**:
-```bash
-# Reduce workspace
-export WORKSPACE_MB=1024
-
-# Or build with lower precision
-# Use FP16 instead of INT8
-```
-
-**Error**: `Unsupported ONNX opset`
-
-**Solution**:
-```bash
-# Re-export ONNX with compatible opset
-python scripts/export_onnx.py --model best.pt --opset 12
-```
-
-### Slow Inference
-
-**Issue**: FPS much lower than expected
-
-**Checks**:
-1. Verify GPU utilization: `nvidia-smi`
-2. Confirm engine is used (not ONNX fallback)
-3. Check precision mode matches config
-4. Ensure no CPU throttling (on Jetson)
-
-### Engine Not Found
-
-**Error**: `Could not find engine file`
-
-**Solution**:
-```bash
-# Set correct paths in DeepStream config
-onnx-file=/full/path/to/model.onnx
-model-engine-file=/full/path/to/model.engine
-
-# Or set environment variables
-export MODELS_DIR=/app/models
 export ENGINES_DIR=/app/engines
 ```
 

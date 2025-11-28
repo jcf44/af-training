@@ -2,39 +2,18 @@
 
 Complete ML training and deployment pipeline for NVIDIA DeepStream.
 
-📖 **[Full Documentation](README.md)** | 🔧 **[Setup Guide](SETUP.md)**
+📖 **[Full Documentation](README.md)** | 🔧# Quick Start Guide
 
-## 30-Second Setup
+## 1. Setup
 
+### Option A: Host (Recommended)
 ```bash
-# Install with uv (modern, fast)
-uv venv && source .venv/bin/activate
-uv pip install -e .
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Or with Docker
-docker-compose build training
-```
-
-## 30-Second Training
-
-**Host (Recommended)**:
-```bash
+# Setup project
+uv venv --python 3.12
 source .venv/bin/activate
-cd training
-python scripts/train.py --data configs/datasets/ppe.yaml --name ppe_v1 --size s
-python scripts/export_onnx.py --all
-```
-
-**Docker (Alternative)**:
-```bash
-docker-compose run training python scripts/train.py \
-    --data configs/datasets/ppe.yaml --name ppe_v1 --size s
-docker-compose run training python scripts/export_onnx.py --all
-```
-
-## 30-Second Deploy
-
-```bash
 # Deploy to Edge
 docker-compose --profile edge up edge-deploy
 

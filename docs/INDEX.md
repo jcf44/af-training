@@ -64,15 +64,6 @@ Welcome to the AF-Training documentation! This index will guide you through all 
 
 ## 📖 Reference Documentation
 
-### [CONVERSATION_ANALYSIS.md](CONVERSATION_ANALYSIS.md)
-**Project background and design decisions**
-- Original conversation analysis
-- Strengths identified
-- Improvements implemented
-- Key insights incorporated
-- How this project addresses gaps in the original discussion
-- Recommended future enhancements
-
 ### [PYTHON_ENV_SUMMARY.md](PYTHON_ENV_SUMMARY.md)
 **Python environment setup summary**
 - Modern uv-based setup

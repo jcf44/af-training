@@ -1,0 +1,44 @@
+# Industrial/Mining Equipment Dataset Configuration
+# Heavy equipment detection for mining and industrial operations
+
+path: ../datasets/processed/industrial
+
+train: train/images
+val: val/images
+test: test/images
+
+nc: 10
+
+names:
+  0: haul_truck
+  1: excavator
+  2: bulldozer
+  3: wheel_loader
+  4: dump_truck
+  5: grader
+  6: wagon
+  7: conveyor
+  8: person
+  9: light_vehicle
+
+info:
+  description: Industrial equipment detection for mining and construction operations
+  use_cases:
+    - Mining site monitoring
+    - Equipment tracking
+    - Safety zone enforcement
+    - Productivity analysis
+  recommended_model_size: s  # YOLOv8s, equipment is large and distinct
+  target_precision: fp16  # FP16 for balance
+  
+# Data sources:
+# - Roboflow construction datasets
+# - Custom annotation required (most mining equipment)
+# - COCO construction subset
+# - Site-specific footage annotation
+
+# Tips for annotation:
+# - Include various distances/angles
+# - Day and night conditions
+# - Different weather (dust, rain)
+# - Partial occlusions

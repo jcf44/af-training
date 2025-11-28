@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # Training service
+  training:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.train
+    image: af-training:latest
+    container_name: af-training
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    volumes:
+      - ../training:/workspace/training
+      - ../deployment:/workspace/deployment
+      - ./data:/workspace/data # Mount your datasets here
+    working_dir: /workspace/training
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+  # Edge deployment (for testing, requires Jetson hardware or emulation)
+  edge-deploy:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.edge
+    image: af-deploy-edge:latest
+    container_name: af-deploy-edge
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ../deployment/common/models:/app/models:ro
+      - ../deployment/common/labels:/app/labels:ro
+      - ../deployment/common/calibration:/app/calibration:ro
+      - ../deployment/edge/configs:/app/configs:ro
+      - edge-engines:/app/engines
+    profiles:
+      - edge
+
+  # x86/Cloud deployment
+  x86-deploy:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.x86
+    image: af-deploy-x86:latest
+    container_name: af-deploy-x86
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ../deployment/common/models:/app/models:ro
+      - ../deployment/common/labels:/app/labels:ro
+      - ../deployment/x86/configs:/app/configs:ro
+      - x86-engines:/app/engines
+    profiles:
+      - x86
+
+volumes:
+  edge-engines:
+  x86-engines:

@@ -1,0 +1,35 @@
+# Training Container - NVIDIA PyTorch with Ultralytics
+FROM nvcr.io/nvidia/pytorch:24.05-py3
+
+LABEL maintainer="AF-Training"
+LABEL description="ML Training container for DeepStream model development"
+
+WORKDIR /workspace
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages
+RUN pip install --no-cache-dir \
+    ultralytics \
+    onnx \
+    onnxsim \
+    tensorrt \
+    opencv-python \
+    pyyaml \
+    pandas \
+    seaborn \
+    matplotlib
+
+# Create directory structure
+RUN mkdir -p /workspace/{training,deployment,outputs}
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV CUDA_MODULE_LOADING=LAZY
+
+# Default command
+CMD ["/bin/bash"]

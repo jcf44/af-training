@@ -1,0 +1,26 @@
+# Calibration Dataset Configuration
+# Smaller representative dataset for INT8 calibration
+# 500-1000 images is sufficient
+
+path: ../datasets/calibration/ppe
+
+train: images  # All calibration images in one directory
+val: images    # No labels needed for calibration
+
+nc: 6
+
+names:
+  0: person
+  1: helmet
+  2: no_helmet
+  3: vest
+  4: no_vest
+  5: harness
+
+# Calibration dataset requirements:
+# - 500-1000 representative images
+# - Same conditions as production (lighting, angles, distances)
+# - All object classes present
+# - Various object sizes
+# - No labels/annotations needed
+# - Same preprocessing as training data

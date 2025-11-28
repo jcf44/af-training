@@ -1,0 +1,54 @@
+# DeepStream Inference Configuration Template
+# Universal template for YOLO models - works across all platforms
+# Replace placeholders with actual values for your model
+
+[property]
+gpu-id=0
+net-scale-factor=0.0039215697906911373
+
+# Model files
+# ONNX file (portable) - engine built on first run if not exists
+onnx-file=${MODELS_DIR}/MODEL_NAME.onnx
+
+# Engine file (platform-specific, auto-generated)
+# Platform: orin_int8, x86_fp16, cloud_fp16
+model-engine-file=${ENGINES_DIR}/MODEL_NAME_PLATFORM.engine
+
+# Labels
+labelfile-path=${LABELS_DIR}/MODEL_NAME.txt
+
+# Inference settings
+batch-size=1
+process-mode=1
+model-color-format=0
+
+# Network mode
+# 0 = FP32 (not recommended)
+# 1 = INT8 (edge devices)
+# 2 = FP16 (cloud/x86)
+network-mode=2
+
+# INT8 calibration cache (only needed for INT8 mode)
+# int8-calib-file=${CALIB_DIR}/calibration.cache
+
+# Model-specific settings
+num-detected-classes=NUM_CLASSES
+cluster-mode=2
+parse-bbox-func-name=NvDsInferParseYolo
+custom-lib-path=/opt/nvidia/deepstream/deepstream/lib/libnvds_infercustomparser.so
+
+# Input dimensions (must match training)
+network-input-order=0
+model-enginefile=${ENGINES_DIR}/MODEL_NAME_PLATFORM.engine
+maintain-aspect-ratio=1
+symmetric-padding=1
+
+# Inference intervals
+interval=0
+gie-unique-id=1
+network-type=0
+
+[class-attrs-all]
+nms-iou-threshold=0.45
+pre-cluster-threshold=0.25
+topk=300

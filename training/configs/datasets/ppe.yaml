@@ -1,0 +1,39 @@
+# PPE Detection Dataset Configuration
+# Personal Protective Equipment: helmets, vests, harness
+
+# Dataset root path (will be set at runtime or updated manually)
+path: ../datasets/processed/ppe
+
+# Relative paths to train/val/test splits
+train: train/images
+val: val/images
+test: test/images
+
+# Number of classes
+nc: 6
+
+# Class names
+names:
+  0: person
+  1: helmet
+  2: no_helmet
+  3: vest
+  4: no_vest
+  5: harness
+
+# Dataset information
+# Replace with your actual dataset details
+info:
+  description: PPE detection for construction and industrial safety
+  use_cases:
+    - Construction site monitoring
+    - Manufacturing safety compliance
+    - Mining operations
+  recommended_model_size: s  # YOLOv8s recommended for real-time edge deployment
+  target_precision: int8  # INT8 quantization for maximum edge performance
+  
+# Recommended data sources:
+# - Roboflow PPE datasets
+# - Kaggle Safety Helmet Dataset
+# - CHV Dataset (Construction Helmet and Vest)
+# - Custom annotation from your site footage

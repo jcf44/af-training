@@ -1,0 +1,10 @@
+haul_truck
+excavator
+bulldozer
+wheel_loader
+dump_truck
+grader
+wagon
+conveyor
+person
+light_vehicle

@@ -1,0 +1,26 @@
+# Edge Deployment Container - DeepStream for Jetson
+FROM nvcr.io/nvidia/deepstream-l4t:7.0-samples
+
+LABEL maintainer="AF-Training"
+LABEL description="DeepStream deployment for Jetson Orin Nano"
+LABEL platform="jetson-orin-nano"
+
+WORKDIR /app
+
+# Create directories
+RUN mkdir -p /app/{models,engines,labels,calibration,configs}
+
+# Copy build script
+COPY deployment/edge/scripts/build_engines.sh /app/build_engines.sh
+RUN chmod +x /app/build_engines.sh
+
+# Environment variables
+ENV MODELS_DIR=/app/models
+ENV ENGINES_DIR=/app/engines
+ENV LABELS_DIR=/app/labels
+ENV CALIB_DIR=/app/calibration
+ENV WORKSPACE_MB=2048
+
+# Entrypoint builds engines on first run
+ENTRYPOINT ["/app/build_engines.sh"]
+CMD ["/bin/bash"]

@@ -1,0 +1,25 @@
+# x86/Cloud Deployment Container - DeepStream for GPU servers
+FROM nvcr.io/nvidia/deepstream:7.0-gc-triton-devel
+
+LABEL maintainer="AF-Training"
+LABEL description="DeepStream deployment for x86/Cloud with GPU"
+LABEL platform="x86-cuda"
+
+WORKDIR /app
+
+# Create directories
+RUN mkdir -p /app/{models,engines,labels,configs}
+
+# Copy build script
+COPY deployment/x86/scripts/build_engines.sh /app/build_engines.sh
+RUN chmod +x /app/build_engines.sh
+
+# Environment variables
+ENV MODELS_DIR=/app/models
+ENV ENGINES_DIR=/app/engines
+ENV LABELS_DIR=/app/labels
+ENV WORKSPACE_MB=8192
+
+# Entrypoint builds engines on first run
+ENTRYPOINT ["/app/build_engines.sh"]
+CMD ["/bin/bash"]

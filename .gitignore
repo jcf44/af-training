@@ -1,0 +1,85 @@
+# .gitignore for AF-Training
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Node.js
+node_modules/
+ui/node_modules/
+.next/
+ui/.next/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Training outputs
+training/outputs/trained/
+training/outputs/onnx/
+training/outputs/calibration/
+training/outputs/logs/
+
+# Datasets (large files)
+training/datasets/raw/
+training/datasets/processed/
+training/datasets/calibration/
+
+# TensorRT engines (device-specific)
+deployment/*/engines/
+*.engine
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+
+# Model files (optional - comment out if you want to track them)
+*.pt
+*.pth
+*.onnx
+*.wts
+
+# Keep directory structure
+!.gitkeep

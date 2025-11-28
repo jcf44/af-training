@@ -1,0 +1,36 @@
+# Traffic Monitoring Dataset Configuration
+# Vehicle and pedestrian detection for traffic analysis
+
+path: ../datasets/processed/traffic
+
+train: train/images
+val: val/images
+test: test/images
+
+nc: 8
+
+names:
+  0: person
+  1: bicycle
+  2: car
+  3: motorcycle
+  4: bus
+  5: truck
+  6: traffic_light
+  7: stop_sign
+
+info:
+  description: Traffic monitoring for vehicle counting and flow analysis
+  use_cases:
+    - Highway traffic monitoring
+    - Intersection analysis
+    - Parking lot management
+    - Speed detection systems
+  recommended_model_size: s  # YOLOv8s for balance
+  target_precision: fp16  # FP16 sufficient for accuracy
+  
+# Recommended data sources:
+# - NVIDIA TrafficCamNet (pre-trained, can fine-tune)
+# - BDD100K dataset
+# - COCO dataset (subset)
+# - Custom traffic camera footage

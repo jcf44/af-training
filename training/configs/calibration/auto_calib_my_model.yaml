@@ -1,0 +1,10 @@
+names:
+- helmet
+- no-helmet
+- no-vest
+- person
+- vest
+nc: 5
+path: /home/johan/projects/assistflow/af-training/training/datasets/processed/construction-safety
+train: valid/images
+val: valid/images

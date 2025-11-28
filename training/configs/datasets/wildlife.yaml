@@ -1,0 +1,42 @@
+# Wildlife Detection Dataset Configuration
+# Animal detection for camera trap and wildlife monitoring
+
+path: ../datasets/processed/wildlife
+
+train: train/images
+val: val/images
+test: test/images
+
+nc: 10
+
+names:
+  0: deer
+  1: bear
+  2: wolf
+  3: mountain_lion
+  4: boar
+  5: fox
+  6: raccoon
+  7: bird
+  8: person
+  9: vehicle
+
+info:
+  description: Wildlife detection for camera trap monitoring and conservation
+  use_cases:
+    - Camera trap analysis
+    - Wildlife corridor monitoring
+    - Conservation research
+    - Human-wildlife conflict detection
+  recommended_model_size: m  # YOLOv8m for better accuracy on small/distant animals
+  target_precision: fp16  # Accuracy important for species identification
+  
+# Recommended data sources:
+# - Microsoft MegaDetector (pre-trained on camera trap data)
+# - LILA BC (Labeled Information Library of Alexandria)
+# - iNaturalist dataset
+# - Snapshot Serengeti
+# - Custom camera trap footage
+
+# Note: Consider using MegaDetector as a first-stage detector
+# (detects animal/person/vehicle) then use custom species classifier

@@ -1,0 +1,34 @@
+# PPE Detection - x86/Cloud Configuration
+# FP16 optimized for server performance
+
+[property]
+gpu-id=0
+net-scale-factor=0.0039215697906911373
+
+# Model files
+onnx-file=/app/models/ppe_best.onnx
+model-engine-file=/app/engines/ppe_best_fp16.engine
+
+# Labels
+labelfile-path=/app/labels/ppe.txt
+
+# Inference settings
+batch-size=4
+process-mode=1
+model-color-format=0
+network-mode=2
+
+# YOLO specific
+num-detected-classes=6
+cluster-mode=2
+parse-bbox-func-name=NvDsInferParseYolo
+custom-lib-path=/opt/nvidia/deepstream/deepstream/lib/libnvds_infercustomparser.so
+
+interval=0
+gie-unique-id=1
+network-type=0
+
+[class-attrs-all]
+nms-iou-threshold=0.45
+pre-cluster-threshold=0.25
+topk=300

@@ -1,0 +1,112 @@
+[project]
+name = "af-training"
+version = "1.0.0"
+description = "ML Training Pipeline for NVIDIA DeepStream"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "AF-Training Team"}
+]
+keywords = ["deepstream", "yolo", "tensorrt", "jetson", "machine-learning", "computer-vision"]
+
+dependencies = [
+    # Core ML
+    "ultralytics>=8.0.0",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    
+    # Computer Vision
+    "opencv-python>=4.8.0",
+    "pillow>=10.0.0",
+    
+    # ONNX & TensorRT
+    "onnx>=1.14.0",
+    "onnxslim>=0.1.71",
+    "onnxruntime-gpu",
+    "tensorrt",
+    
+    # Data handling
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "pyyaml>=6.0",
+    
+    # Visualization
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    
+    # Progress & Logging
+    "tqdm>=4.65.0",
+    
+    # API
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "python-multipart",
+    "aiofiles",
+    "sqlmodel",
+    "sse-starlette",
+]
+
+[project.scripts]
+af-training-api = "api.main:start_dev"
+
+[project.optional-dependencies]
+# Development tools
+dev = [
+    "pytest>=7.4.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "ipython>=8.12.0",
+    "jupyter>=1.0.0",
+]
+
+# TensorRT (requires manual installation on host)
+tensorrt = [
+    # TensorRT must be installed separately via NVIDIA packages
+    # pip install tensorrt or use NVIDIA container
+]
+
+# Full installation (for Docker)
+all = [
+    "af-training[dev]",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/af-training"
+Documentation = "https://github.com/your-org/af-training/blob/main/README.md"
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | build
+  | dist
+  | outputs
+)/
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]  # Line too long (handled by black)
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]  # Unused imports in __init__
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

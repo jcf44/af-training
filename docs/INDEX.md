@@ -18,6 +18,7 @@ Welcome to the AF-Training documentation! This index will guide you through all 
 - Host-based setup (recommended)
   - uv installation and usage
   - pip alternative
+- **UI & API Setup** (Node.js/Next.js)
 - Docker setup (optional)
 - GPU verification
 - TensorRT installation
@@ -32,17 +33,16 @@ Welcome to the AF-Training documentation! This index will guide you through all 
 **Complete dataset preparation guide**
 - Dataset requirements per domain
 - Public dataset sources
-  - PPE detection datasets
-  - Traffic monitoring datasets
-  - Wildlife datasets
-  - Industrial/mining datasets
-- Annotation tools comparison (CVAT, Label Studio, Roboflow)
+- Annotation tools comparison
 - Dataset preparation workflow
-  - Frame extraction
-  - Train/val/test splitting
-  - YAML configuration
-- Data quality checks
-- INT8 calibration dataset creation
+
+### [UI.md](UI.md)
+**Web Interface Guide**
+- Dashboard overview
+- Training workflow
+- Model management & Export
+- Real-time logs
+- Deployment bundles
 
 ### [DEPLOYMENT.md](DEPLOYMENT.md)
 **Multi-platform deployment guide**
@@ -80,6 +80,7 @@ docs/
 ├── INDEX.md                    # This file - documentation index
 ├── QUICKSTART.md              # Quick reference guide
 ├── SETUP.md                   # Environment setup guide
+├── UI.md                      # Web Interface guide
 ├── DATASETS.md                # Dataset preparation guide
 ├── DEPLOYMENT.md              # Multi-platform deployment guide
 └── PYTHON_ENV_SUMMARY.md      # Python environment summary

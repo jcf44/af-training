@@ -56,6 +56,27 @@ uv pip install -e .
 python -c "import ultralytics; print('✓ Ultralytics installed')"
 ```
 
+### 4. Setup UI & API
+
+The project includes a web interface for easier management.
+
+**Prerequisites**:
+- **Node.js 18+**
+- **npm**
+
+```bash
+# 1. Start the API (Terminal 1)
+uv run af-training-api
+
+# 2. Setup & Start UI (Terminal 2)
+cd ui
+npm install
+npm run dev
+
+# 3. Access
+# Open http://localhost:3000
+```
+
 ### Install TensorRT (Optional, for local ONNX→TensorRT conversion)
 
 TensorRT is optional for training but needed for local engine building.

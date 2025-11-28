@@ -18,12 +18,14 @@ class EventManager:
     _subscribers: List[asyncio.Queue] = []
 
     _tracked_processes: Dict[int, Dict[str, Any]] = {}
+    _db_job_state: Dict[int, Dict[str, Any]] = {}
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(EventManager, cls).__new__(cls)
             cls._instance._subscribers = []
             cls._instance._tracked_processes = {}
+            cls._instance._db_job_state = {}
         return cls._instance
 
     async def subscribe(self):
@@ -63,6 +65,31 @@ class EventManager:
                     
                     for job in running_jobs:
                         if job.pid:
+                            # Stream logs first
+                            if job.log_path and os.path.exists(job.log_path):
+                                try:
+                                    # Initialize state if needed
+                                    if job.id not in self._db_job_state:
+                                        self._db_job_state[job.id] = {"log_pos": 0}
+                                    
+                                    state = self._db_job_state[job.id]
+                                    
+                                    with open(job.log_path, "r") as f:
+                                        f.seek(state["log_pos"])
+                                        new_lines = f.readlines()
+                                        if new_lines:
+                                            state["log_pos"] = f.tell()
+                                            # Broadcast new lines
+                                            await self.broadcast("log_update", {
+                                                "pid": job.pid,
+                                                "name": job.name,
+                                                "type": "training",
+                                                "lines": [line.rstrip() for line in new_lines]
+                                            })
+                                except Exception as e:
+                                    logger.error(f"Error reading logs for job {job.id}: {e}")
+
+                            # Check if process finished
                             if not process_manager.is_process_running(job.pid):
                                 job.status = "completed"
                                 job.end_time = datetime.utcnow()
@@ -75,6 +102,10 @@ class EventManager:
                                     "name": job.name,
                                     "status": "completed"
                                 })
+                                
+                                # Cleanup state
+                                if job.id in self._db_job_state:
+                                    del self._db_job_state[job.id]
 
                 # 2. Check in-memory tracked processes (Export/Calibration)
                 completed_pids = []

@@ -22,6 +22,19 @@ class TrainRequest(BaseModel):
     epochs: int = 100
     batch_size: int = 16
     imgsz: int = 640
+    
+    class Config:
+        extra = "allow"
+
+@router.get("/schema/{model_type}")
+def get_training_schema(model_type: str):
+    """Get the configuration schema for a specific model type."""
+    try:
+        from ..services.training_strategies import TrainingStrategyFactory
+        strategy = TrainingStrategyFactory.get_strategy(model_type)
+        return strategy.get_schema()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/", response_model=TrainingJobRead)
 def start_training(req: TrainRequest, session: Session = Depends(get_session)):
@@ -37,20 +50,14 @@ def start_training(req: TrainRequest, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(job)
     
-    # Construct command
-    # python scripts/train.py --data configs/datasets/{req.dataset_config} --name {req.name} --size {req.model_size} ...
-    
-    cmd = [
-        "python",
-        "training/scripts/train.py",
-        "--data", f"training/configs/datasets/{req.dataset_config}",
-        "--name", req.name,
-        "--size", req.model_size,
-        "--epochs", str(req.epochs),
-        "--batch", str(req.batch_size),
-        "--imgsz", str(req.imgsz),
-        "--output", "training/outputs/trained"
-    ]
+    # Get strategy
+    try:
+        from ..services.training_strategies import TrainingStrategyFactory
+        strategy = TrainingStrategyFactory.get_strategy(req.model_type)
+        strategy.validate_config(req.dict())
+        cmd = strategy.get_command(req.dict())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     log_path = os.path.join(PROJECT_ROOT, f"training/outputs/logs/{job.id}_{req.name}.log")
     
@@ -127,3 +134,15 @@ def get_job_logs(job_id: int, session: Session = Depends(get_session)):
         
     with open(job.log_path, "r") as f:
         return {"logs": f.read()}
+
+@router.delete("/jobs")
+def clear_jobs(session: Session = Depends(get_session)):
+    """Clear all training jobs."""
+    jobs = session.exec(select(TrainingJob)).all()
+    for job in jobs:
+        # Stop if running
+        if job.status == "running" and job.pid:
+            process_manager.stop_process(job.pid)
+        session.delete(job)
+    session.commit()
+    return {"message": "All jobs cleared"}

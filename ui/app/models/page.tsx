@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { useJobContext } from "@/contexts/job-context";
 
-const API_URL = "http://localhost:8000";
+import { API_URL } from "@/utils/config";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 

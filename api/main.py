@@ -31,7 +31,8 @@ app.include_router(events.router)
 
 def start_dev():
     import uvicorn
-    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)
+    from .config import settings
+    uvicorn.run("api.main:app", host="0.0.0.0", port=settings.API_PORT, reload=True)
 
 if __name__ == "__main__":
     start_dev()

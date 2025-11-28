@@ -42,7 +42,15 @@ Welcome to the AF-Training documentation! This index will guide you through all 
 - Training workflow
 - Model management & Export
 - Real-time logs
+- Real-time logs
 - Deployment bundles
+
+### [IIOT_MODELS.md](IIOT_MODELS.md)
+**Non-Vision Models Guide**
+- Time Series Forecasting (ARIMA)
+- Anomaly Detection (Isolation Forest)
+- Tabular Data (XGBoost)
+
 
 ### [DEPLOYMENT.md](DEPLOYMENT.md)
 **Multi-platform deployment guide**

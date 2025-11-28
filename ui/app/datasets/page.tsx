@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, RefreshCw, Upload } from "lucide-react";
 
-const API_URL = "http://localhost:8000";
+import { API_URL } from "@/utils/config";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 

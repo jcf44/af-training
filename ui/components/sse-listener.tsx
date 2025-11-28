@@ -6,7 +6,7 @@ import { useSWRConfig } from "swr";
 
 import { useJobContext } from "@/contexts/job-context";
 
-const API_URL = "http://localhost:8000";
+import { API_URL } from "@/utils/config";
 
 export function SSEListener() {
     const { mutate } = useSWRConfig();
@@ -14,6 +14,10 @@ export function SSEListener() {
 
     useEffect(() => {
         const eventSource = new EventSource(`${API_URL}/events`);
+
+        eventSource.onopen = () => {
+            console.log("SSE Connected");
+        };
 
         eventSource.onmessage = (event) => {
             try {
@@ -32,8 +36,6 @@ export function SSEListener() {
                 } else if (type === "calibration_completed") {
                     toast.success(`Calibration for "${data.name}" completed!`);
                     removeJob(`calibrate-${data.name}`);
-                    // Calibration doesn't necessarily update the models list unless we list cache files
-                    // But we can refresh anyway
                     mutate(`${API_URL}/models/`);
                 } else if (type === "log_update") {
                     addLog(data.lines);

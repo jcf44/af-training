@@ -11,10 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Loader2, Play, Square, RefreshCw } from "lucide-react";
 
-const API_URL = "http://localhost:8000";
+import { API_URL } from "@/utils/config";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -22,15 +22,15 @@ export default function TrainingPage() {
     const { data: jobs, error, mutate } = useSWR(`${API_URL}/train/jobs`, fetcher, { refreshInterval: 5000 });
     const { data: datasets } = useSWR(`${API_URL}/datasets/`, fetcher);
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<any>({
         name: "my_model",
         model_type: "YOLO",
-        dataset_config: "",
-        model_size: "s",
-        epochs: 100,
-        batch_size: 16,
-        imgsz: 640
     });
+
+    const { data: schema } = useSWR(
+        formData.model_type ? `${API_URL}/train/schema/${formData.model_type}` : null,
+        fetcher
+    );
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -73,6 +73,25 @@ export default function TrainingPage() {
         { refreshInterval: 2000 }
     );
 
+    const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+
+    const handleClearJobs = () => {
+        setIsClearDialogOpen(true);
+    };
+
+    const confirmClearJobs = async () => {
+        try {
+            const res = await fetch(`${API_URL}/train/jobs`, {
+                method: "DELETE",
+            });
+            if (!res.ok) throw new Error("Failed to clear jobs");
+            mutate();
+            setIsClearDialogOpen(false);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -105,85 +124,95 @@ export default function TrainingPage() {
                             <Label htmlFor="type">Model Type</Label>
                             <Select
                                 value={formData.model_type}
-                                onValueChange={(val) => setFormData({ ...formData, model_type: val })}
+                                onValueChange={(val) => {
+                                    setFormData({ ...formData, model_type: val });
+                                    // Reset dynamic fields when type changes
+                                    // We keep name and model_type
+                                }}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="YOLO">YOLO (Object Detection)</SelectItem>
-                                    <SelectItem value="ResNet">ResNet (Classification)</SelectItem>
-                                    <SelectItem value="UNet">UNet (Segmentation)</SelectItem>
+                                    <SelectItem value="TimeSeries">Time Series (Forecasting)</SelectItem>
+                                    <SelectItem value="Anomaly">Anomaly Detection (Maintenance)</SelectItem>
+                                    <SelectItem value="Tabular">Tabular (Classification/Regression)</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
-                        {formData.model_type === "YOLO" && (
-                            <>
-                                <div className="space-y-2">
-                                    <Label htmlFor="dataset">Dataset Config</Label>
-                                    <Select
-                                        value={formData.dataset_config}
-                                        onValueChange={(val) => setFormData({ ...formData, dataset_config: val })}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select dataset" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {datasets?.configs.map((config: string) => (
-                                                <SelectItem key={config} value={config}>{config}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                        {/* Dynamic Form Fields */}
+                        {schema && Object.entries(schema.properties).map(([key, field]: [string, any]) => {
+                            // Skip fields if needed, but we render all properties
+                            return (
+                                <div key={key} className="space-y-2">
+                                    <Label htmlFor={key}>{field.title || key}</Label>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="size">Model Size</Label>
-                                    <Select
-                                        value={formData.model_size}
-                                        onValueChange={(val) => setFormData({ ...formData, model_size: val })}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select size" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="n">Nano (n)</SelectItem>
-                                            <SelectItem value="s">Small (s)</SelectItem>
-                                            <SelectItem value="m">Medium (m)</SelectItem>
-                                            <SelectItem value="l">Large (l)</SelectItem>
-                                            <SelectItem value="x">XLarge (x)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="epochs">Epochs</Label>
+                                    {/* Render Select for Enums */}
+                                    {field.enum ? (
+                                        <Select
+                                            value={formData[key] !== undefined ? String(formData[key]) : String(field.default || "")}
+                                            onValueChange={(val) => setFormData((prev: any) => ({ ...prev, [key]: val }))}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder={`Select ${field.title}`} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {field.enum.map((opt: string, idx: number) => (
+                                                    <SelectItem key={opt} value={opt}>
+                                                        {field.enumNames ? field.enumNames[idx] : opt}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    ) : field.enum_source === "datasets" ? (
+                                        <Select
+                                            value={formData[key] || ""}
+                                            onValueChange={(val) => setFormData((prev: any) => ({ ...prev, [key]: val }))}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select dataset" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {datasets?.configs.map((config: string) => (
+                                                    <SelectItem key={config} value={config}>{config}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    ) : field.enum_source === "datasets_raw" ? (
+                                        <Select
+                                            value={formData[key] || ""}
+                                            onValueChange={(val) => setFormData((prev: any) => ({ ...prev, [key]: val }))}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select CSV dataset" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {/* TODO: Fetch raw datasets. For now using same list or mock */}
+                                                <SelectItem value="sensor_data.csv">sensor_data.csv</SelectItem>
+                                                <SelectItem value="production_log.csv">production_log.csv</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    ) : field.type === "integer" || field.type === "number" ? (
                                         <Input
-                                            id="epochs"
+                                            id={key}
                                             type="number"
-                                            value={formData.epochs}
-                                            onChange={(e) => setFormData({ ...formData, epochs: parseInt(e.target.value) })}
+                                            value={formData[key] !== undefined ? formData[key] : field.default}
+                                            onChange={(e) => setFormData((prev: any) => ({ ...prev, [key]: parseInt(e.target.value) || 0 }))}
                                         />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="batch">Batch Size</Label>
+                                    ) : (
                                         <Input
-                                            id="batch"
-                                            type="number"
-                                            value={formData.batch_size}
-                                            onChange={(e) => setFormData({ ...formData, batch_size: parseInt(e.target.value) })}
+                                            id={key}
+                                            type="text"
+                                            value={formData[key] !== undefined ? formData[key] : (field.default || "")}
+                                            onChange={(e) => setFormData((prev: any) => ({ ...prev, [key]: e.target.value }))}
                                         />
-                                    </div>
+                                    )}
+                                    {field.description && <p className="text-xs text-muted-foreground">{field.description}</p>}
                                 </div>
-                            </>
-                        )}
-
-                        {formData.model_type !== "YOLO" && (
-                            <div className="p-4 border rounded-md bg-muted/50 text-center text-sm text-muted-foreground">
-                                Configuration for {formData.model_type} is not yet implemented.
-                            </div>
-                        )}
+                            );
+                        })}
 
                         <Button className="w-full" onClick={handleStartTraining} disabled={isSubmitting}>
                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
@@ -193,9 +222,19 @@ export default function TrainingPage() {
                 </Card>
 
                 <Card className="md:col-span-2">
-                    <CardHeader>
-                        <CardTitle>Training Jobs</CardTitle>
-                        <CardDescription>History and active jobs</CardDescription>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle>Training Jobs</CardTitle>
+                            <CardDescription>History and active jobs</CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={handleClearJobs}>
+                                Clear Jobs
+                            </Button>
+                            <Button variant="outline" size="icon" onClick={() => mutate()}>
+                                <RefreshCw className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <ScrollArea className="h-[600px]">
@@ -264,6 +303,20 @@ export default function TrainingPage() {
                     <ScrollArea className="flex-1 min-h-0 w-full rounded-md border p-4 bg-black text-white font-mono text-sm">
                         <pre>{logsData?.logs || "Loading logs..."}</pre>
                     </ScrollArea>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Clear All Jobs?</DialogTitle>
+                        <DialogDescription>
+                            This action cannot be undone. This will permanently delete all job history and stop any currently running training jobs.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsClearDialogOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={confirmClearJobs}>Clear All</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

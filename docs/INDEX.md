@@ -82,7 +82,6 @@ docs/
 ├── SETUP.md                   # Environment setup guide
 ├── DATASETS.md                # Dataset preparation guide
 ├── DEPLOYMENT.md              # Multi-platform deployment guide
-├── CONVERSATION_ANALYSIS.md   # Project background
 └── PYTHON_ENV_SUMMARY.md      # Python environment summary
 ```
 

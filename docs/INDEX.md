@@ -118,10 +118,6 @@ docs/
 1. [QUICKSTART.md](QUICKSTART.md) - Quick commands
 2. [../README.md](../README.md) - Example workflows
 
-### "I want to understand the project design"
-1. [CONVERSATION_ANALYSIS.md](CONVERSATION_ANALYSIS.md) - Background
-2. [../README.md](../README.md) - Project overview
-
 ---
 
 ## 📋 Additional Resources

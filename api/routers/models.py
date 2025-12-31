@@ -1,8 +1,16 @@
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse, StreamingResponse
+import hashlib
+import io
 import os
+import zipfile
+from typing import List, Optional
+
+import httpx
 import yaml
-from typing import List
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import FileResponse, StreamingResponse
+from pydantic import BaseModel
+
+from ..config import settings
 
 router = APIRouter(prefix="/models", tags=["models"])
 
@@ -299,9 +307,398 @@ symmetric-padding=1
         zip_file.writestr("config_infer_primary.txt", ds_config)
         
     zip_buffer.seek(0)
-    
+
     return StreamingResponse(
         iter([zip_buffer.getvalue()]),
         media_type="application/zip",
         headers={"Content-Disposition": f"attachment; filename={name}_deployment.zip"}
     )
+
+
+# ML Model directories (for sklearn, xgboost, etc.)
+ML_OUTPUTS_DIR = os.path.join(PROJECT_ROOT, settings.ML_OUTPUTS_DIR)
+
+
+class PushRequest(BaseModel):
+    """Request body for pushing model to registry."""
+
+    model_type: str = "isolation_forest"
+    framework: str = "joblib"
+    version: str = "1.0"
+    description: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+
+def _calculate_checksum(file_path: str) -> str:
+    """Calculate SHA256 checksum of a file."""
+    sha256_hash = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+
+def _find_ml_model_files(name: str) -> dict:
+    """
+    Find ML model files for a given model name.
+
+    Searches in common output directories:
+    - outputs/anomaly/{name}/
+    - outputs/tabular/{name}/
+    - outputs/{name}/
+
+    Returns dict with model_path, scaler_path, metadata_path (all optional).
+    """
+    result = {"model_path": None, "scaler_path": None, "metadata_path": None}
+
+    # Possible locations
+    search_dirs = [
+        os.path.join(ML_OUTPUTS_DIR, "anomaly", name),
+        os.path.join(ML_OUTPUTS_DIR, "tabular", name),
+        os.path.join(ML_OUTPUTS_DIR, name),
+    ]
+
+    for search_dir in search_dirs:
+        if not os.path.exists(search_dir):
+            continue
+
+        # Look for model file
+        for model_name in ["model.pkl", "model.joblib", f"{name}.pkl", f"{name}.joblib"]:
+            model_path = os.path.join(search_dir, model_name)
+            if os.path.exists(model_path):
+                result["model_path"] = model_path
+                break
+
+        # Look for scaler file
+        for scaler_name in ["scaler.pkl", "scaler.joblib"]:
+            scaler_path = os.path.join(search_dir, scaler_name)
+            if os.path.exists(scaler_path):
+                result["scaler_path"] = scaler_path
+                break
+
+        # Look for metadata file
+        for meta_name in ["metadata.json", "config.json", "training_config.json"]:
+            meta_path = os.path.join(search_dir, meta_name)
+            if os.path.exists(meta_path):
+                result["metadata_path"] = meta_path
+                break
+
+        # If we found a model, stop searching
+        if result["model_path"]:
+            break
+
+    return result
+
+
+@router.get("/ml")
+def list_ml_models():
+    """List ML models (sklearn, xgboost, etc.) available for push."""
+    ml_models = []
+
+    # Search in ML outputs directories
+    search_roots = [
+        os.path.join(ML_OUTPUTS_DIR, "anomaly"),
+        os.path.join(ML_OUTPUTS_DIR, "tabular"),
+        ML_OUTPUTS_DIR,
+    ]
+
+    seen_names = set()
+
+    for search_root in search_roots:
+        if not os.path.exists(search_root):
+            continue
+
+        for name in os.listdir(search_root):
+            if name in seen_names:
+                continue
+
+            model_dir = os.path.join(search_root, name)
+            if not os.path.isdir(model_dir):
+                continue
+
+            # Check if it has a model file
+            files = _find_ml_model_files(name)
+            if files["model_path"]:
+                seen_names.add(name)
+
+                # Determine model type from directory structure
+                if "anomaly" in search_root:
+                    model_type = "isolation_forest"
+                elif "tabular" in search_root:
+                    model_type = "xgboost"
+                else:
+                    model_type = "sklearn"
+
+                ml_models.append(
+                    {
+                        "name": name,
+                        "model_path": files["model_path"],
+                        "scaler_path": files["scaler_path"],
+                        "metadata_path": files["metadata_path"],
+                        "type": model_type,
+                    }
+                )
+
+    return {"ml_models": ml_models}
+
+
+@router.post("/{name}/push")
+async def push_to_registry(
+    name: str,
+    request: PushRequest,
+    registry_url: str = Query(
+        default=None, description="Override registry URL from config"
+    ),
+):
+    """
+    Push a trained model to the af-api2 model registry.
+
+    Supports both DL models (ONNX) and ML models (sklearn/joblib).
+
+    For DL models: Pushes the ONNX bundle (model + config + labels)
+    For ML models: Pushes the model file + optional scaler file
+    """
+    url = registry_url or settings.REGISTRY_URL
+
+    # First, try to find ML model
+    ml_files = _find_ml_model_files(name)
+
+    if ml_files["model_path"]:
+        # Push ML model
+        return await _push_ml_model(name, ml_files, request, url)
+
+    # If not ML, check for DL model (ONNX)
+    onnx_file = None
+    potential_onnx = os.path.join(ONNX_DIR, f"{name}_best.onnx")
+    if os.path.exists(potential_onnx):
+        onnx_file = potential_onnx
+    else:
+        # Search for matching ONNX file
+        if os.path.exists(ONNX_DIR):
+            for f in os.listdir(ONNX_DIR):
+                if f.startswith(name) and f.endswith(".onnx"):
+                    onnx_file = os.path.join(ONNX_DIR, f)
+                    break
+
+    if onnx_file:
+        # Push DL model
+        return await _push_dl_model(name, onnx_file, request, url)
+
+    raise HTTPException(
+        status_code=404,
+        detail=f"No model found for '{name}'. Check outputs/anomaly/{name}/, "
+        f"outputs/tabular/{name}/, or training/outputs/onnx/",
+    )
+
+
+async def _push_ml_model(
+    name: str,
+    files: dict,
+    request: PushRequest,
+    registry_url: str,
+):
+    """Push ML model (sklearn/joblib) to registry."""
+    model_path = files["model_path"]
+    scaler_path = files.get("scaler_path")
+    metadata_path = files.get("metadata_path")
+
+    # Calculate checksum
+    checksum = _calculate_checksum(model_path)
+
+    # Load metadata if available
+    model_metadata = {}
+    if metadata_path and os.path.exists(metadata_path):
+        import json
+
+        with open(metadata_path, "r") as f:
+            model_metadata = json.load(f)
+
+    # Generate model_id
+    model_id = f"{name}-{request.model_type}-v{request.version}".replace(" ", "-").lower()
+
+    # Prepare multipart upload
+    upload_url = f"{registry_url}/api/v1/models/upload"
+
+    try:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            # Prepare files for upload
+            files_dict = {
+                "model_file": (
+                    os.path.basename(model_path),
+                    open(model_path, "rb"),
+                    "application/octet-stream",
+                ),
+            }
+
+            # Add scaler if available
+            if scaler_path and os.path.exists(scaler_path):
+                files_dict["scaler_file"] = (
+                    os.path.basename(scaler_path),
+                    open(scaler_path, "rb"),
+                    "application/octet-stream",
+                )
+
+            # Prepare form data
+            data = {
+                "model_id": model_id,
+                "name": name,
+                "version": request.version,
+                "type": request.model_type,
+                "framework": request.framework,
+                "description": request.description or f"ML model trained with af-training",
+                "metadata": str(model_metadata),  # Will be JSON serialized
+            }
+
+            if request.tags:
+                data["tags"] = ",".join(request.tags)
+
+            response = await client.post(upload_url, data=data, files=files_dict)
+
+            # Close file handles
+            for f in files_dict.values():
+                f[1].close()
+
+            if response.status_code not in (200, 201):
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Registry upload failed: {response.text}",
+                )
+
+            result = response.json()
+
+            return {
+                "message": f"ML model '{name}' pushed to registry",
+                "registry_model_id": result.get("model_id", model_id),
+                "model_type": request.model_type,
+                "framework": request.framework,
+                "checksum": checksum,
+                "has_scaler": scaler_path is not None,
+            }
+
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to connect to registry at {registry_url}: {str(e)}",
+        )
+
+
+async def _push_dl_model(
+    name: str,
+    onnx_file: str,
+    request: PushRequest,
+    registry_url: str,
+):
+    """Push DL model (ONNX bundle) to registry."""
+    # Find associated files
+    model_dir = os.path.join(MODELS_DIR, name)
+    args_path = os.path.join(model_dir, "args.yaml")
+
+    # Get labels
+    labels = []
+    num_classes = 80
+    if os.path.exists(args_path):
+        with open(args_path, "r") as f:
+            args = yaml.safe_load(f)
+            data_path = args.get("data")
+            if data_path:
+                if not os.path.isabs(data_path):
+                    data_path = os.path.join(PROJECT_ROOT, data_path)
+
+                if os.path.exists(data_path):
+                    with open(data_path, "r") as df:
+                        data_config = yaml.safe_load(df)
+                        names = data_config.get("names", {})
+                        num_classes = data_config.get("nc", 80)
+                        if isinstance(names, list):
+                            labels = names
+                        elif isinstance(names, dict):
+                            labels = [names[i] for i in sorted(names.keys())]
+
+    if not labels:
+        labels = [f"class_{i}" for i in range(num_classes)]
+
+    # Generate DeepStream config
+    onnx_filename = os.path.basename(onnx_file)
+    ds_config = f"""[property]
+gpu-id=0
+net-scale-factor=0.0039215697906911373
+model-color-format=0
+onnx-file={onnx_filename}
+model-engine-file=model.engine
+labelfile-path=labels.txt
+batch-size=1
+network-mode=2
+num-detected-classes={num_classes}
+interval=0
+gie-unique-id=1
+process-mode=1
+network-type=0
+cluster-mode=2
+maintain-aspect-ratio=1
+symmetric-padding=1
+"""
+
+    # Create bundle ZIP
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.write(onnx_file, onnx_filename)
+        zf.writestr("labels.txt", "\n".join(labels))
+        zf.writestr("config_infer_primary.txt", ds_config)
+
+    zip_buffer.seek(0)
+
+    # Calculate checksum of ONNX file
+    checksum = _calculate_checksum(onnx_file)
+
+    # Generate model_id
+    model_id = f"{name}-yolo-v{request.version}".replace(" ", "-").lower()
+
+    # Push to registry
+    upload_url = f"{registry_url}/api/v1/models/upload-bundle"
+
+    try:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            files_dict = {
+                "bundle_file": (
+                    f"{name}_deployment.zip",
+                    zip_buffer,
+                    "application/zip",
+                ),
+            }
+
+            data = {
+                "model_id": model_id,
+                "name": name,
+                "version": request.version,
+                "type": "yolo",
+                "framework": "onnx",
+                "description": request.description or f"YOLO model trained with af-training",
+            }
+
+            if request.tags:
+                data["tags"] = ",".join(request.tags)
+
+            response = await client.post(upload_url, data=data, files=files_dict)
+
+            if response.status_code not in (200, 201):
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Registry upload failed: {response.text}",
+                )
+
+            result = response.json()
+
+            return {
+                "message": f"DL model '{name}' pushed to registry",
+                "registry_model_id": result.get("model_id", model_id),
+                "model_type": "yolo",
+                "framework": "onnx",
+                "checksum": checksum,
+                "num_classes": num_classes,
+            }
+
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to connect to registry at {registry_url}: {str(e)}",
+        )
